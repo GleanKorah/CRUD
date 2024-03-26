@@ -1,28 +1,37 @@
 // Import dependencies
+const db = require("./db");
 const express = require("express");
 const bodyParser = require("body-parser");
-const { Pool } = require("pg");
 
 // Create Express app
 const app = express();
 app.use(bodyParser.json());
 
-// Configure PostgreSQL connection
-const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "postgres",
-  password: "goethe10",
-  port: 5432,
-});
+const { PrismaClient } = require("@prisma/client");
+
+const prisma = new PrismaClient();
 
 // Get all students
+// app.get("/students", async (req, res) => {
+//   try {
+//     const result = await pool.query("SELECT * FROM students");
+//     res.status(200).json({
+//       status: "succes",
+//       data: result.rows,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Internal Server Error");
+//   }
+// });
+
 app.get("/students", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM students");
+    const allStudent = await prisma.students.findMany();
+    console.log(allStudent);
     res.status(200).json({
-      status: "succes",
-      data: result.rows,
+      status: "success",
+      data: allStudent,
     });
   } catch (err) {
     console.error(err);
@@ -31,16 +40,35 @@ app.get("/students", async (req, res) => {
 });
 
 // Insert a new student
+// app.post("/students", async (req, res) => {
+//   const { name, address } = req.body;
+//   try {
+//     const result = await pool.query(
+//       "INSERT into students (name, address) values ($1, $2) RETURNING *",
+//       [name, address]
+//     );
+//     res.status(200).json({
+//       status: "Insert succes",
+//       data: result.rows,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Internal Server Error");
+//   }
+// });
+
 app.post("/students", async (req, res) => {
   const { name, address } = req.body;
   try {
-    const result = await pool.query(
-      "INSERT into students (name, address) values ($1, $2) RETURNING *",
-      [name, address]
-    );
+    await prisma.students.create({
+      data: {
+        name: name,
+        address: address,
+      },
+    });
     res.status(200).json({
-      status: "Insert succes",
-      data: result.rows,
+      status: "success",
+      message: "data berhasil dimasukan",
     });
   } catch (err) {
     console.error(err);
@@ -49,17 +77,44 @@ app.post("/students", async (req, res) => {
 });
 
 // Update an existing student
+// app.put("/students/:id", async (req, res) => {
+//   const id = req.params.id;
+//   const { name, address } = req.body;
+//   try {
+//     const result = await pool.query(
+//       "UPDATE students SET name = $1, address = $2 WHERE id = $3 RETURNING *",
+//       [name, address, id]
+//     );
+//     res.status(200).json({
+//       status: "Update succes",
+//       data: result.rows,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Internal Server Error");
+//   }
+// });
+
 app.put("/students/:id", async (req, res) => {
   const id = req.params.id;
   const { name, address } = req.body;
   try {
-    const result = await pool.query(
-      "UPDATE students SET name = $1, address = $2 WHERE id = $3 RETURNING *",
-      [name, address, id]
-    );
+    // const result = await pool.query(
+    //   "UPDATE students SET name = $1, address = $2 WHERE id = $3 RETURNING *",
+    //   [name, address, id]
+    //  );
+
+    await prisma.students.update({
+      where: { id: parseInt(id) },
+      data: {
+        name: name,
+        address: address,
+      },
+    });
+
     res.status(200).json({
       status: "Update succes",
-      data: result.rows,
+      //data: result,
     });
   } catch (err) {
     console.error(err);
@@ -68,10 +123,25 @@ app.put("/students/:id", async (req, res) => {
 });
 
 // Delete a student
+// app.delete("/students/:id", async (req, res) => {
+//   const id = req.params.id;
+//   try {
+//     await pool.query("DELETE FROM students WHERE id=$1", [id]);
+//     res.status(200).json({
+//       status: "Delete succes",
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Internal Server Error");
+//   }
+// });
+
 app.delete("/students/:id", async (req, res) => {
   const id = req.params.id;
   try {
-    await pool.query("DELETE FROM students WHERE id=$1", [id]);
+    await prisma.students.delete({
+      where: { id: parseInt(id) },
+    });
     res.status(200).json({
       status: "Delete succes",
     });
@@ -82,15 +152,31 @@ app.delete("/students/:id", async (req, res) => {
 });
 
 // Get a student by ID
+// app.get("/students/:id", async (req, res) => {
+//   const id = req.params.id;
+//   try {
+//     const result = await pool.query("SELECT * FROM students WHERE id=$1", [id]);
+//     if (result.rows.length > 0) {
+//       res.json(result.rows[0]);
+//     } else {
+//       res.status(404).send("Student not found");
+//     }
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Internal Server Error");
+//   }
+// });
+
 app.get("/students/:id", async (req, res) => {
   const id = req.params.id;
   try {
-    const result = await pool.query("SELECT * FROM students WHERE id=$1", [id]);
-    if (result.rows.length > 0) {
-      res.json(result.rows[0]);
-    } else {
-      res.status(404).send("Student not found");
-    }
+    const result = await prisma.students.findUnique({
+      where: { id: parseInt(id) },
+    });
+    res.status(200).json({
+      status: "Data Ditemukan",
+      Data: result,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Internal Server Error");
